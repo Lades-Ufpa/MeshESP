@@ -1,4 +1,5 @@
 #include <Arduino.h>
+<<<<<<< Updated upstream
 // библиотека для работы с датчиками MQ (Troyka-модуль)
 #include <TroykaMQ.h>
 
@@ -84,4 +85,30 @@ void loop()
     Serial.println(" ppm");
     delay(2000);
   }
+=======
+
+const int transPin = 8;
+const int ldrPin = A0;
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(transPin, OUTPUT);
+  pinMode(ldrPin, INPUT);
+  digitalWrite(transPin, HIGH);
+
+}
+
+void loop() {
+
+int ldrStatus = analogRead(ldrPin);
+
+
+Serial.print("Valor do LDR: ");
+Serial.print(ldrStatus);
+Serial.println("");
+
+delay(2000);
+
+>>>>>>> Stashed changes
 }
