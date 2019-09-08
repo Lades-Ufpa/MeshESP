@@ -1,87 +1,57 @@
-#include <Arduino.h>
-// библиотека для работы с датчиками MQ (Troyka-модуль)
-#include <TroykaMQ.h>
+#include <ESP8266WiFi.h> //INCLUSÃO DA BIBLIOTECA NECESSÁRIA PARA FUNCIONAMENTO DO CÓDIGO
 
-// nome do pino ao qual o sensor está conectado / pino ADC
-#define PIN_MQ9         A0
-#define PIN_MQ135       A1
-// nome do pino ao qual o aquecedor do sensor está conectado
-#define PIN_MQ9_HEATER  11
-#define PIN_MQ135_HEATER  7
+const char* ssid = "lab_pesquisa"; //VARIÁVEL QUE ARMAZENA O NOME DA REDE SEM FIO EM QUE VAI CONECTAR
+const char* password = "1q2w3e4r5"; //VARIÁVEL QUE ARMAZENA A SENHA DA REDE SEM FIO EM QUE VAI CONECTAR
 
-// cria um objeto para trabalhar com o sensor
-// e enviar-lhe o número do pino do sinal de saída e o aquecedor
-MQ9 mq9(PIN_MQ9, PIN_MQ9_HEATER);
-MQ135 mq135(PIN_MQ135);
+WiFiServer server(80); //CASO OCORRA PROBLEMAS COM A PORTA 80, UTILIZE OUTRA (EX:8082,8089) E A CHAMADA DA URL FICARÁ IP:PORTA(EX: 192.168.0.15:8082)
 
-void setup()
-{
-  // открываем последовательный порт
-  Serial.begin(9600);
-  // запускаем термоцикл
-  // в течении 60 секунд на нагревательный элемент подаётся 5 вольт
-  // в течении 90 секунд — 1,5 вольта
-  mq9.cycleHeat();
-  mq135.heaterPwrHigh();
-  Serial.println("Heated sensor");
+void setup() {
+  Serial.begin(115200); //INICIALIZA A SERIAL
+  delay(10); //INTERVALO DE 10 MILISEGUNDOS
+
+  Serial.println(""); //PULA UMA LINHA NA JANELA SERIAL
+  Serial.println(""); //PULA UMA LINHA NA JANELA SERIAL
+  Serial.print("Conectando a "); //ESCREVE O TEXTO NA SERIAL
+  Serial.print(ssid); //ESCREVE O NOME DA REDE NA SERIAL
+
+  WiFi.begin(ssid, password); //PASSA OS PARÂMETROS PARA A FUNÇÃO QUE VAI FAZER A CONEXÃO COM A REDE SEM FIO
+
+  while (WiFi.status() != WL_CONNECTED) { //ENQUANTO STATUS FOR DIFERENTE DE CONECTADO
+    delay(500); //INTERVALO DE 500 MILISEGUNDOS
+    Serial.print("."); //ESCREVE O CARACTER NA SERIAL
+  }
+  Serial.println(""); //PULA UMA LINHA NA JANELA SERIAL
+  Serial.print("Conectado a rede sem fio "); //ESCREVE O TEXTO NA SERIAL
+  Serial.println(ssid); //ESCREVE O NOME DA REDE NA SERIAL
+  server.begin(); //INICIA O SERVIDOR PARA RECEBER DADOS NA PORTA DEFINIDA EM "WiFiServer server(porta);"
+  Serial.println("Servidor iniciado"); //ESCREVE O TEXTO NA SERIAL
+
+  Serial.print("IP para se conectar ao NodeMCU: "); //ESCREVE O TEXTO NA SERIAL
+  Serial.print("http://"); //ESCREVE O TEXTO NA SERIAL
+  Serial.println(WiFi.localIP()); //ESCREVE NA SERIAL O IP RECEBIDO DENTRO DA REDE SEM FIO (O IP NESSA PRÁTICA É RECEBIDO DE FORMA AUTOMÁTICA)
 }
+void loop() {
+  WiFiClient client = server.available(); //VERIFICA SE ALGUM CLIENTE ESTÁ CONECTADO NO SERVIDOR
+  if (!client) { //SE NÃO EXISTIR CLIENTE CONECTADO, FAZ
+    return; //REEXECUTA O PROCESSO ATÉ QUE ALGUM CLIENTE SE CONECTE AO SERVIDOR
+  }
+  Serial.println("Novo cliente se conectou!"); //ESCREVE O TEXTO NA SERIAL
+  while(!client.available()){ //ENQUANTO CLIENTE ESTIVER CONECTADO
+    delay(1); //INTERVALO DE 1 MILISEGUNDO
+  }
+  String request = client.readStringUntil('\r'); //FAZ A LEITURA DA PRIMEIRA LINHA DA REQUISIÇÃO
+  Serial.println(request); //ESCREVE A REQUISIÇÃO NA SERIAL
+  client.flush(); //AGUARDA ATÉ QUE TODOS OS DADOS DE SAÍDA SEJAM ENVIADOS AO CLIENTE
 
-void loop()
-{
-  // если прошёл интервал нагрева датчика
-  // и калибровка не была совершена
-  if (!mq9.isCalibrated() && mq9.atHeatCycleEnd()) {
-    // выполняем калибровку датчика на чистом воздухе
-    mq9.calibrate();
-    // при знании сопративления датчика на чистом воздухе
-    // можно его указать вручную, допустим 7.2
-    // mq9.calibrate(7.2);
-    // выводим сопротивление датчика в чистом воздухе (Ro) в serial-порт
-    Serial.print("Ro Mq9 = ");
-    Serial.println(mq9.getRo());
-    // запускаем термоцикл
-    mq9.cycleHeat();
-  }
-  if (!mq135.isCalibrated() && mq135.heatingCompleted()) {
-    // выполняем калибровку датчика на чистом воздухе
-    mq135.calibrate();
-    // при знании сопративления датчика на чистом воздухе
-    // можно его указать вручную, допустим 160
-    // mq135.calibrate(160);
-    // выводим сопротивление датчика в чистом воздухе (Ro) в serial-порт
-    Serial.print("Ro Mq135 = ");
-    Serial.println(mq135.getRo());
-  }
-  // если прошёл интевал нагрева датчика
-  // и калибровка была совершена
-  if (mq9.isCalibrated() && mq9.atHeatCycleEnd()) {
-    // выводим отношения текущего сопротивление датчика
-    // к сопротивлению датчика в чистом воздухе (Rs/Ro)
-    Serial.print("Ratio: ");
-    Serial.print(mq9.readRatio());
-    // выводим значения газов в ppm
-    Serial.print(" LPG: ");
-    Serial.print(mq9.readLPG());
-    Serial.print(" ppm ");
-    Serial.print(" Methane: ");
-    Serial.print(mq9.readMethane());
-    Serial.print(" ppm ");
-    Serial.print(" CarbonMonoxide: ");
-    Serial.print(mq9.readCarbonMonoxide());
-    Serial.println(" ppm ");
-    delay(100);
-    // запускаем термоцикл
-    mq9.cycleHeat();
-  }
-  if (mq135.isCalibrated() && mq135.heatingCompleted()) {
-    // выводим отношения текущего сопротивление датчика
-    // к сопротивлению датчика в чистом воздухе (Rs/Ro)
-    Serial.print("Ratio: ");
-    Serial.print(mq135.readRatio());
-    // выводим значения газов в ppm
-    Serial.print("\tCO2: ");
-    Serial.print(mq135.readCO2());
-    Serial.println(" ppm");
-    delay(100);
-  }
+  client.println("HTTP/1.1 200 OK"); //ESCREVE PARA O CLIENTE A VERSÃO DO HTTP
+  client.println("Content-Type: text/html"); //ESCREVE PARA O CLIENTE O TIPO DE CONTEÚDO(texto/html)
+  client.println("");
+  client.println("<!DOCTYPE HTML>"); //INFORMA AO NAVEGADOR A ESPECIFICAÇÃO DO HTML
+  client.println("<html>"); //ABRE A TAG "html"
+  client.println("<h1><center>Ola cliente!</center></h1>"); //ESCREVE "Ola cliente!" NA PÁGINA
+  client.println("<center><font size='5'>Seja bem vindo!</center>"); //ESCREVE "Seja bem vindo!" NA PÁGINA
+  client.println("</html>"); //FECHA A TAG "html"
+  delay(1); //INTERVALO DE 1 MILISEGUNDO
+  Serial.println("Cliente desconectado"); //ESCREVE O TEXTO NA SERIAL
+  Serial.println(""); //PULA UMA LINHA NA JANELA SERIAL
 }

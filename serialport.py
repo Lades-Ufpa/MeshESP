@@ -7,7 +7,7 @@ import time
  
 #Define a porta e o baudrate usado
 #No Windows a porta e alguma das COMs
-porta = '/dev/ttyUSB0'
+porta = '/dev/ttyACM0'
 baud_rate = 115200
  
 opcao = raw_input("Verificar GPS? s / n")

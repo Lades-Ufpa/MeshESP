@@ -1,114 +1,75 @@
 #include <Arduino.h>
-<<<<<<< Updated upstream
-// библиотека для работы с датчиками MQ (Troyka-модуль)
 #include <TroykaMQ.h>
 
-// nome do pino ao qual o sensor está conectado / pino ADC
-#define PIN_MQ9         A0
+// nome do pino ao qual o sensor est� conectado / pino ADC
 #define PIN_MQ135       A1
-// nome do pino ao qual o aquecedor do sensor está conectado
-#define PIN_MQ9_HEATER  8
+#define PIN_MQ9         A0
+// nome do pino ao qual o aquecedor do sensor est� conectado
 #define PIN_MQ135_HEATER  7
-
-// cria um objeto para trabalhar com o sensor
-// e enviar-lhe o número do pino do sinal de saída e o aquecedor
-MQ9 mq9(PIN_MQ9, PIN_MQ9_HEATER);
+#define PIN_MQ9_HEATER  8
+//cria um objeto para trabalhar com o sensor
+// e enviar-lhe o n�mero do pino do sinal de sa�da e o aquecedor
 MQ135 mq135(PIN_MQ135, PIN_MQ135_HEATER);
+MQ9 mq9(PIN_MQ9, PIN_MQ9_HEATER);
 
 void setup()
 {
-  // открываем последовательный порт
-  Serial.begin(115200);
-  // запускаем термоцикл
-  // в течении 60 секунд на нагревательный элемент подаётся 5 вольт
-  // в течении 90 секунд — 1,5 вольта
-  mq9.cycleHeat();
+  Serial.begin(9600);
   mq135.heaterPwrHigh();
   Serial.println("Heated sensor");
+  mq9.cycleHeat();
+
 }
 
 void loop()
 {
-  // если прошёл интервал нагрева датчика
-  // и калибровка не была совершена
-  if (!mq9.isCalibrated() && mq9.atHeatCycleEnd()) {
-    // выполняем калибровку датчика на чистом воздухе
-    mq9.calibrate();
-    // при знании сопративления датчика на чистом воздухе
-    // можно его указать вручную, допустим 7.2
-    // mq9.calibrate(7.2);
-    // выводим сопротивление датчика в чистом воздухе (Ro) в serial-порт
-    Serial.print("Ro Mq9 = ");
-    Serial.println(mq9.getRo());
-    // запускаем термоцикл
-    mq9.cycleHeat();
-  }
+  int i = 0;
+  double amostra_ratio_co2 = 0;
+  double amostra_co2 = 0;
+  double somappm_co2 = 0;
+  double mediappm_co2 = 0;
+  double amostraratioco = 0;
+  double amostraco = 0;
+  double somappm_co = 0;
+  double mediappm_co = 0;
+
+
   if (!mq135.isCalibrated() && mq135.heatingCompleted()) {
-    // выполняем калибровку датчика на чистом воздухе
-    mq135.calibrate();
-    // при знании сопративления датчика на чистом воздухе
-    // можно его указать вручную, допустим 160
-    // mq135.calibrate(160);
-    // выводим сопротивление датчика в чистом воздухе (Ro) в serial-порт
-    Serial.print("Ro Mq135 = ");
-    Serial.println(mq135.getRo());
+    mq135.calibrate(395.67);  //Possivel especificar manualmente dentro do parenteses
   }
-  // если прошёл интевал нагрева датчика
-  // и калибровка была совершена
-  if (mq9.isCalibrated() && mq9.atHeatCycleEnd()) {
-    // выводим отношения текущего сопротивление датчика
-    // к сопротивлению датчика в чистом воздухе (Rs/Ro)
-    Serial.print("Ratio: ");
-    Serial.print(mq9.readRatio());
-    // выводим значения газов в ppm
-    Serial.print(" LPG: ");
-    Serial.print(mq9.readLPG());
-    Serial.print(" ppm ");
-    Serial.print(" Methane: ");
-    Serial.print(mq9.readMethane());
-    Serial.print(" ppm ");
-    Serial.print(" CarbonMonoxide: ");
-    Serial.print(mq9.readCarbonMonoxide());
-    Serial.println(" ppm ");
-    delay(200);
-    // запускаем термоцикл
+  if (!mq9.isCalibrated() && mq9.heatingCompleted()) {
+
+    mq9.calibrate(8.62);  //Possivel especificar manualmente dentro do parenteses
     mq9.cycleHeat();
-  }
-  if (mq135.isCalibrated() && mq135.heatingCompleted()) {
-    // выводим отношения текущего сопротивление датчика
-    // к сопротивлению датчика в чистом воздухе (Rs/Ro)
-    Serial.print("Ratio: ");
-    Serial.print(mq135.readRatio());
-    // выводим значения газов в ppm
+}
+  if ((mq135.isCalibrated() && mq135.heatingCompleted()) && (mq9.isCalibrated() && mq9.heatingCompleted())) {
+    /*&& (mq9.isCalibrated() && mq9.heatingCompleted())*/
+    /*Serial.print("Ratio: ");
+    Serial.print(mq135.readRatio()); // Fun��o que calcula o Ratio
     Serial.print("\tCO2: ");
-    Serial.print(mq135.readCO2());
+    Serial.print(mq135.readCO2());   // Fun��o que relaciona o Ratio com (ppm)
     Serial.println(" ppm");
     delay(2000);
+    */
+
+    for(i=0; i<3; i++){
+      mq135.readRatio();
+      mq9.readRatio();
+      amostra_ratio_co2 = mq135.readRatio();
+      amostraratioco = mq9.readRatio();
+      amostra_co2 = mq135.readCO2();
+     amostraco = mq9.readCarbonMonoxide();
+      somappm_co2 += amostra_co2;
+     somappm_co = amostraco;
+      delay(1000);
+    }
+    mediappm_co2 = somappm_co2 / 3;
+   mediappm_co = somappm_co / 3;
+    //Serial.print("MediappmCO2: ");
+    Serial.print(mediappm_co2);
+  //  Serial.print("MediappmCO: ");
+    Serial.print(";");
+   Serial.println(mediappm_co);
+    //delay(2000);
   }
-=======
-
-const int transPin = 8;
-const int ldrPin = A0;
-
-void setup() {
-  Serial.begin(9600);
-
-  pinMode(transPin, OUTPUT);
-  pinMode(ldrPin, INPUT);
-  digitalWrite(transPin, HIGH);
-
-}
-
-void loop() {
-
-int ldrStatus = analogRead(ldrPin);
-
-
-Serial.print("Valor do LDR: ");
-Serial.print(ldrStatus);
-Serial.println("");
-
-delay(2000);
-
->>>>>>> Stashed changes
 }
